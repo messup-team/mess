@@ -1,8 +1,12 @@
 <template>
   <div class="p-2 space-y-2">
     <div class="flex w-full space-x-0.5">
-      <base-input v-model="searchQuery" class="flex-grow" @keyup.enter="onNewChat" />
-      <base-button @click="onNewChat"> WRITE </base-button>
+      <base-input
+        v-model="searchQuery"
+        class="flex-grow"
+        @keyup.enter="() => onNewChat(false)"
+      />
+      <base-button @click="() => onNewChat(true)"> WRITE </base-button>
     </div>
     <the-chat
       v-for="user of chats"
@@ -31,8 +35,8 @@ function onSelect(user: string) {
   router.push(`/chats/${user}`)
 }
 
-function onNewChat() {
-  if (chats.value.length === 0) {
+function onNewChat(always: boolean) {
+  if (chats.value.length === 0 || always) {
     router.push(`/chats/${searchQuery.value}`)
     return
   } else {
