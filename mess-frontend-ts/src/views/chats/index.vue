@@ -1,5 +1,9 @@
 <template>
   <div class="p-2 space-y-2">
+    <div class="flex w-full space-x-0.5">
+      <base-input v-model="searchQuery" class="flex-grow" @keyup.enter="onNewChat" />
+      <base-button @click="onNewChat"> WRITE </base-button>
+    </div>
     <the-chat
       v-for="user of chats"
       :key="user"
@@ -10,18 +14,36 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 
 import TheChat from '/src/components/TheChat.vue'
+import BaseInput from '/src/components/base/BaseInput.vue'
+import BaseButton from '/src/components/base/BaseButton.vue'
 
 const store = useStore()
 const router = useRouter()
+
+const searchQuery = ref('')
 
 function onSelect(user: string) {
   router.push(`/chats/${user}`)
 }
 
-const chats = computed(() => store.getters.messages.chats)
+function onNewChat() {
+  if (chats.value.length === 0) {
+    router.push(`/chats/${searchQuery.value}`)
+    return
+  } else {
+    router.push(`/chats/${chats.value[0]}`)
+  }
+}
+
+const chats = computed(() => {
+  if (searchQuery.value === '') return store.getters.messages.chats
+  return store.getters.messages.chats.filter((user: string) =>
+    user.toLowerCase().startsWith(searchQuery.value.toLowerCase())
+  )
+})
 </script>

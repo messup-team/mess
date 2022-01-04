@@ -4,7 +4,7 @@
     :class="message.from !== login ? 'justify-start' : 'justify-end'"
   >
     <div
-      class="w-[300px] px-4 pt-4 pb-5 rounded-xl bg-blue-300 relative"
+      class="w-[300px] px-4 pt-4 pb-5 rounded-xl bg-blue-300 relative break-words"
       :class="{
         'bg-blue-200 rounded-bl-none': message.to === login,
         'bg-blue-100 rounded-br-none': message.from === login,
@@ -12,7 +12,7 @@
       }"
     >
       {{ message.message }}
-      <div class="text-[9px] absolute right-3 bottom-1">
+      <div class="text-[8px] absolute right-3 bottom-1">
         {{ message.from === login ? 'Me' : message.from }}
         {{ formatTimestamp(message.timestamp) }}
         {{ iconOfStatus(message.status) }}

@@ -33,7 +33,7 @@
     <div
       class="sm:absolute sm:bottom-1 sm:px-3 my-3 left-0 flex space-x-0.5 justify-center w-full"
     >
-      <base-input
+      <base-textarea
         v-model="message"
         class="flex-grow"
         placeholder="message..."
@@ -53,6 +53,7 @@ import { useRouter } from 'vue-router'
 import TheMessage from '/src/components/TheMessage.vue'
 import BaseButton from '/src/components/base/BaseButton.vue'
 import BaseInput from '/src/components/base/BaseInput.vue'
+import BaseTextarea from '/src/components/base/BaseTextarea.vue'
 
 const store = useStore()
 const router = useRouter()
@@ -89,7 +90,13 @@ const message = ref('')
 // element.scrollTop = element.scrollHeight
 const messages = computed(() => store.getters.messages.messagesWith(props.user))
 
-function onSend() {
+function onSend(event: any) {
+  if (event?.ctrlKey) {
+    message.value += '\n'
+    console.log('hello')
+    return
+  }
+  message.value = message.value.slice(0, message.value.length - 1)
   if (message.value === '') return
   store.dispatch('sendMessage', {
     message: message.value,
