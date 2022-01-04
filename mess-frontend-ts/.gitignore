@@ -1,10 +1,9 @@
 node_modules
-.vscode
 .DS_Store
 dist
 dist-ssr
+.vscode/
 *.local
 .firebaserc
-.firebase/
-dist
+.firebase
 firebase.json
