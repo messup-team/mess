@@ -11,7 +11,7 @@
       </div>
     </div>
     <div
-      class="flex-grow order-last hidden space-y-2 overflow-y-scroll sm:block"
+      class="flex-grow order-last hidden px-2 space-y-2 overflow-y-scroll sm:block"
       ref="messagesElement"
     >
       <the-message
@@ -21,7 +21,7 @@
       />
     </div>
     <div
-      class="flex-grow order-last block space-y-2 overflow-y-scroll sm:hidden"
+      class="flex-grow order-last block px-2 space-y-2 overflow-y-scroll sm:hidden"
       ref="messagesElementReverse"
     >
       <the-message
