@@ -11,7 +11,7 @@
         'bg-red-200': message.unread,
       }"
     >
-      {{ message.message }}
+      {{ message.body }}
       <div class="text-[8px] absolute right-3 bottom-1">
         {{ message.from === login ? 'Me' : message.from }}
         {{ formatTimestamp(message.timestamp) }}

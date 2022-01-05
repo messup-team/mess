@@ -131,7 +131,7 @@ export const store = createStore<State>({
       const message: Message = messages.packMessage({
         from: state.login,
         to: payload.to,
-        message: payload.message,
+        body: payload.message,
         timestamp: utils.now(),
         unread: true,
         status: 'PROCESS',

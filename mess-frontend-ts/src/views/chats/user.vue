@@ -14,11 +14,7 @@
       class="flex-grow order-last hidden px-2 space-y-2 overflow-y-scroll sm:block"
       ref="messagesElement"
     >
-      <the-message
-        v-for="message of messages"
-        :key="message.timestamp"
-        :message="message"
-      />
+      <the-message v-for="message of messages" :key="message.id" :message="message" />
     </div>
     <div
       class="flex-grow order-last block px-2 space-y-2 overflow-y-scroll sm:hidden"

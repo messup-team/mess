@@ -17,7 +17,7 @@ export interface Message {
   id: string
   from: string
   to: string
-  message: string
+  body: string
   timestamp: number
   unread: boolean
   status: MessageStatus
@@ -26,7 +26,7 @@ export interface Message {
 export interface MessageWithoutId {
   from: string
   to: string
-  message: string
+  body: string
   timestamp: number
   unread: boolean
   status: MessageStatus
