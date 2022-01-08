@@ -74,11 +74,16 @@ function scroolMessagesBottomSlow() {
 }
 
 onMounted(() => {
+  updateTimeout()
   scroolMessagesBottom()
-
   // read messages
-  store.dispatch('readMessagesFrom', props.user)
+  // store.dispatch('readMessagesFrom', props.user)
 })
+
+function updateTimeout() {
+  store.dispatch('readMessages', props.user)
+  setTimeout(updateTimeout, 5000)
+}
 
 const props = defineProps({ user: String })
 
@@ -89,7 +94,6 @@ const messages = computed(() => store.getters.messages.messagesWith(props.user))
 function onSend(event: any) {
   if (event?.ctrlKey) {
     message.value += '\n'
-    console.log('hello')
     return
   }
   message.value = message.value.slice(0, message.value.length - 1)

@@ -6,13 +6,14 @@ import mess, {
   messages,
   utils,
   auth,
-  MessageWithoutId,
+  RawMessage,
   MessageStatus,
 } from '../mess-api'
 
 export interface State {
   login: string
   messages: Array<Message>
+  chats: Array<string>
 }
 
 const timestampSort = (a: Message, b: Message) => a.timestamp - b.timestamp
@@ -22,6 +23,7 @@ export const store = createStore<State>({
   state: {
     login: '',
     messages: [],
+    chats: [],
   },
 
   getters: {
@@ -61,6 +63,11 @@ export const store = createStore<State>({
             .sort(timestampSort),
       }
     },
+    chats: (state: State) => {
+      return {
+        chats: state.chats,
+      }
+    },
   },
 
   mutations: {
@@ -70,6 +77,19 @@ export const store = createStore<State>({
     addMessage(state: State, message: Message) {
       if (!mess.messages.isInside(message, state.messages)) state.messages.push(message)
     },
+    // TODO: update status and unread fields
+    addMessages(state: State, messages: Array<Message>) {
+      const ids = new Set(state.messages.map((message: Message) => message.id))
+      const filteredMessages = messages.filter((message: Message) => !ids.has(message.id))
+      state.messages = state.messages.concat(filteredMessages)
+    },
+    setMessages(state: State, messages: Array<Message>) {
+      state.messages = messages
+    },
+    setChats(state: State, chats: Array<string>) {
+      state.chats = chats
+    },
+
     setMessageStatus(state: State, payload: { id: string; status: MessageStatus }) {
       state.messages = state.messages.map((message: Message) => {
         return {
@@ -108,9 +128,6 @@ export const store = createStore<State>({
         }
       })
     },
-    setMessages(state: State, messages: Array<Message>) {
-      state.messages = messages
-    },
   },
 
   actions: {
@@ -118,8 +135,10 @@ export const store = createStore<State>({
       const response = await mess.auth.validateLogin(login)
       if (response) {
         commit('setLogin', login)
-        const messages = await mess.messages.getMessages(login)
-        commit('setMessages', messages)
+        // const messages = await mess.messages.getMessages(login)
+        // commit('setMessages', messages)
+        const chats = await mess.chats.getChats(login)
+        commit('setChats', chats)
       } else throw new Error('Invalid login')
     },
     async userLogout({ commit }) {
@@ -128,24 +147,26 @@ export const store = createStore<State>({
     },
 
     async sendMessage({ commit, state }, payload: { message: string; to: string }) {
-      const message: Message = messages.packMessage({
+      const rawMessage: RawMessage = {
         from: state.login,
         to: payload.to,
         body: payload.message,
-        timestamp: utils.now(),
-        unread: true,
-        status: 'PROCESS',
-      })
+      }
+
+      const [message, promise] = mess.messages.sendMessage(rawMessage)
+      // messages.sendMessage(message).then((response: boolean) => {
+      //   commit('setMessageStatus', { id: message.id, status: response ? 'OK' : 'FAILED' })
+      // })
       commit('addMessage', message)
-      messages.sendMessage(message).then((response: boolean) => {
-        commit('setMessageStatus', { id: message.id, status: response ? 'OK' : 'FAILED' })
-      })
       console.log('new message', message)
+      promise.then((val) =>
+        commit('setMessageStatus', { id: message.id, status: val.data })
+      )
     },
 
-    async readMessagesFrom({ commit }, user) {
-      await messages.readMessagesFrom(user)
-      setTimeout(() => commit('readMessagesFrom', user), 1000)
+    async readMessages({ commit, state }, user) {
+      const messages = await mess.messages.readMessages(state.login, user)
+      commit('addMessages', messages)
     },
   },
 })

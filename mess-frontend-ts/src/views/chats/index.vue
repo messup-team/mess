@@ -32,6 +32,7 @@ const router = useRouter()
 const searchQuery = ref('')
 
 function onSelect(user: string) {
+  store.dispatch('readMessages', user)
   router.push(`/chats/${user}`)
 }
 
@@ -45,8 +46,8 @@ function onNewChat(always: boolean) {
 }
 
 const chats = computed(() => {
-  if (searchQuery.value === '') return store.getters.messages.chats
-  return store.getters.messages.chats.filter((user: string) =>
+  if (searchQuery.value === '') return store.getters.chats.chats
+  return store.getters.chats.chats.filter((user: string) =>
     user.toLowerCase().startsWith(searchQuery.value.toLowerCase())
   )
 })

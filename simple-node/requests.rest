@@ -1,25 +1,22 @@
 # HTTP
 
-### GetMessages 
-GET http://localhost:8080/messages/read?user=kotsmile&offset=0
 
-
-### GetMessagesWith 
-GET http://localhost:8080/messages/read-with?user=kotsmile&userWith=max&offset=0
+### ReadMessages 
+GET http://localhost:8080/messages/read?user=kotsmile&with=man&offset=0
 
 
 ### GetChats 
 GET http://localhost:8080/chats/get?user=kotsmile&offset=0
 
 
-### AddMessage
+### SendMessage
 POST http://localhost:8080/messages/send
 Content-Type: application/json
 
 {
-    "id": "4f6014c6-1fb0-44e3-953c-074952d1b69d",
-    "from": "kotsmile",
-    "to": "man",
-    "body": "hello man, how are you",
-    "timestamp": 1641411956
+    "id": "b8f757ff-43b3-488b-a84a-3c2ced37ac55",
+    "from": "roma",
+    "to": "kotsmile",
+    "body": "hello man, how are you yoyo",
+    "timestamp": 1641527346
 }
