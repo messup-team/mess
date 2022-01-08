@@ -89,53 +89,6 @@ func (s *Server) WatchMessges() http.HandlerFunc {
 	}
 }
 
-func (s *Server) AmountNewMessages() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		dbAcces, err := s.GetDB()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		user := r.URL.Query().Get("user")
-		if user == "" {
-			http.Error(w, "user is empty", http.StatusBadRequest)
-			return
-		}
-
-		offsetString := r.URL.Query().Get("offset")
-
-		if offsetString == "" {
-			offsetString = "0"
-		}
-
-		offset, err := strconv.Atoi(offsetString)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		chats, err := dbAcces.AmountNewMessages(context.Background(), db.AmountNewMessagesParams{
-			To:     user,
-			Offset: int32(offset),
-		})
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(chats); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
-
 func (s *Server) ReadMessages() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -291,7 +244,6 @@ func (s *Server) routes() {
 	// GET
 	// doesnot change the state of base
 	s.HandleFunc("/messages/watch", s.WatchMessges()).Methods("GET")
-	s.HandleFunc("/messages/amount", s.AmountNewMessages())
 	s.HandleFunc("/chats/get", s.GetChats()).Methods("GET")
 
 	// change the state of base

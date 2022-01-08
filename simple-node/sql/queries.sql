@@ -24,22 +24,29 @@ where id in (
 ) returning *;
 
 -- name: GetChats :many
-select doubled_chats."user"
-from (
-         select case
-                    when "from" = $1 then "to"
-                    else "from"
-                    end
-                                 as "user",
-                max("timestamp") as "timestamp"
-         from messages
-         where "from" = $1 
-            or "to" = $1 
-         group by "from", "to"
-     ) as doubled_chats
-group by doubled_chats."user"
-order by max("timestamp") desc
-limit 100 offset $2;
+select chats."user", case when "new" is null then 0 else "new" end as "new"
+from (select doubled_chats."user"
+      from (
+               select case
+                          when messages."from" = $1 then messages."to"
+                          else messages."from"
+                          end
+                                       as "user",
+                      max("timestamp") as "timestamp"
+               from messages
+               where "from" =$1 
+                  or "to" =$1 
+               group by "from", "to"
+           ) as doubled_chats
+      group by doubled_chats."user"
+      order by max("timestamp") desc
+      limit 100 offset $2) as chats
+         left join (
+                select "from" as "user", count(id) as "new" from messages
+where "to" = $1 and unread
+group by "from"
+             ) as new_messages  on new_messages."user" = chats."user";
+
 
 -- name: AddPendingMessage :exec
 insert into pending_messages (id, "from", "to", body, "timestamp")

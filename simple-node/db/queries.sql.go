@@ -94,22 +94,28 @@ func (q *Queries) ChangeStatus(ctx context.Context, arg ChangeStatusParams) erro
 }
 
 const getChats = `-- name: GetChats :many
-select doubled_chats."user"
-from (
-         select case
-                    when "from" = $1 then "to"
-                    else "from"
-                    end
-                                 as "user",
-                max("timestamp") as "timestamp"
-         from messages
-         where "from" = $1 
-            or "to" = $1 
-         group by "from", "to"
-     ) as doubled_chats
-group by doubled_chats."user"
-order by max("timestamp") desc
-limit 100 offset $2
+select chats."user", case when "new" is null then 0 else "new" end as "new"
+from (select doubled_chats."user"
+      from (
+               select case
+                          when messages."from" = $1 then messages."to"
+                          else messages."from"
+                          end
+                                       as "user",
+                      max("timestamp") as "timestamp"
+               from messages
+               where "from" =$1 
+                  or "to" =$1 
+               group by "from", "to"
+           ) as doubled_chats
+      group by doubled_chats."user"
+      order by max("timestamp") desc
+      limit 100 offset $2) as chats
+         left join (
+                select "from" as "user", count(id) as "new" from messages
+where "to" = $1 and unread
+group by "from"
+             ) as new_messages  on new_messages."user" = chats."user"
 `
 
 type GetChatsParams struct {
@@ -117,19 +123,24 @@ type GetChatsParams struct {
 	Offset int32
 }
 
-func (q *Queries) GetChats(ctx context.Context, arg GetChatsParams) ([]interface{}, error) {
+type GetChatsRow struct {
+	User interface{} `json:"user"`
+	New  interface{} `json:"new"`
+}
+
+func (q *Queries) GetChats(ctx context.Context, arg GetChatsParams) ([]GetChatsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getChats, arg.From, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []interface{}
+	var items []GetChatsRow
 	for rows.Next() {
-		var user interface{}
-		if err := rows.Scan(&user); err != nil {
+		var i GetChatsRow
+		if err := rows.Scan(&i.User, &i.New); err != nil {
 			return nil, err
 		}
-		items = append(items, user)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
