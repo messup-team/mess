@@ -125,7 +125,7 @@ type GetChatsParams struct {
 
 type GetChatsRow struct {
 	User interface{} `json:"user"`
-	New  interface{} `json:"new"`
+	New  interface{} `json:"inbox"`
 }
 
 func (q *Queries) GetChats(ctx context.Context, arg GetChatsParams) ([]GetChatsRow, error) {
