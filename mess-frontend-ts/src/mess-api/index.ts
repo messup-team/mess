@@ -15,6 +15,12 @@ export type MessageStatus = 'OK' | 'FAILED' | 'PROCESS'
 
 const host = 'http://localhost:8080'
 
+export interface RawMessage {
+  from: string
+  to: string
+  body: string
+}
+
 export interface Message {
   id: string
   from: string
@@ -25,10 +31,14 @@ export interface Message {
   status: MessageStatus
 }
 
-export interface RawMessage {
-  from: string
-  to: string
-  body: string
+export interface Chat {
+  user: string
+  inbox: number
+}
+
+export interface Response {
+  message: Message
+  wait: Promise<AxiosResponse<any, any>>
 }
 
 function isInside(newMessage: Message, messages: Array<Message>): boolean {
@@ -41,32 +51,8 @@ async function validateLogin(login: string): Promise<boolean> {
   return true
 }
 
-async function getMessages(login: string): Promise<Array<Message>> {
-  return mockMessages(login)
-}
-
-async function readMessage(from: string, id: number): Promise<boolean> {
-  return true
-}
-
-// async function readMessagesFrom(from: string): Promise<boolean> {
-//   return true
-// }
-
-// async function readMessages(from: string, ids: Array<number>): Promise<boolean> {
-//   return true
-// }
-
-// async function sendMessage(message: Message): Promise<boolean> {
-//   return new Promise((resolve, reject) =>
-//     setTimeout(() => {
-//       resolve(true)
-//     }, 2000)
-//   )
-// }
-
 // real api
-async function getChats(user: string, offset = 0): Promise<Array<string>> {
+async function getChats(user: string, offset = 0): Promise<Array<Chat>> {
   try {
     const response = await axios.get(host + '/chats/get', {
       params: {
@@ -74,7 +60,28 @@ async function getChats(user: string, offset = 0): Promise<Array<string>> {
         offset,
       },
     })
-    return response.data as Array<string>
+    return response.data as Array<Chat>
+  } catch (error) {
+    console.error(error)
+    return new Promise((resolve, reject) => resolve([]))
+  }
+}
+
+async function watchMessages(
+  user: string,
+  with_: string,
+  offset = 0
+): Promise<Array<Message>> {
+  try {
+    const response = await axios.get(host + '/messages/watch', {
+      params: {
+        user,
+        with: with_,
+        offset,
+      },
+    })
+    if (response.data) return response.data as Array<Message>
+    return []
   } catch (error) {
     console.error(error)
     return new Promise((resolve, reject) => resolve([]))
@@ -94,16 +101,15 @@ async function readMessages(
         offset,
       },
     })
-    return response.data as Array<Message>
+    if (response.data) return response.data as Array<Message>
+    return []
   } catch (error) {
     console.error(error)
     return new Promise((resolve, reject) => resolve([]))
   }
 }
 
-function sendMessage(
-  rawMessage: RawMessage
-): [Message, Promise<AxiosResponse<any, any>>] {
+function sendMessage(rawMessage: RawMessage): Response {
   const message = {
     ...rawMessage,
     id: uuidv4(),
@@ -121,27 +127,15 @@ function sendMessage(
     promise = new Promise((resolve, reject) => resolve({ data: 'FAILED' }))
   }
 
-  return [
-    {
+  return {
+    message: {
       ...message,
       status: 'PROCESS',
       unread: true,
     } as Message,
-    promise as Promise<AxiosResponse<any, any>>,
-  ]
+    wait: promise as Promise<AxiosResponse<any, any>>,
+  }
 }
-
-// function hashSumMessage(message: MessageWithoutId): string {
-//   // return hash(message)
-//   return uuidv4()
-// }
-
-// function packMessage(message: MessageWithoutId): Message {
-//   return {
-//     ...message,
-//     id: hashSumMessage(message),
-//   }
-// }
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp * 1000)
@@ -157,8 +151,7 @@ export const auth = {
 }
 
 export const messages = {
-  getMessages,
-  readMessage,
+  watchMessages,
   readMessages,
   sendMessage,
   isInside,

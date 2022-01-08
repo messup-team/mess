@@ -9,9 +9,10 @@
       <base-button @click="() => onNewChat(true)"> WRITE </base-button>
     </div>
     <the-chat
-      v-for="user of chats"
+      v-for="{ user, inbox } of chats"
       :key="user"
       :user="user"
+      :inbox="inbox"
       @click="() => onSelect(user)"
     />
   </div>
@@ -21,6 +22,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
+import { Chat } from '../../mess-api'
 
 import TheChat from '/src/components/TheChat.vue'
 import BaseInput from '/src/components/base/BaseInput.vue'
@@ -32,7 +34,8 @@ const router = useRouter()
 const searchQuery = ref('')
 
 function onSelect(user: string) {
-  store.dispatch('readMessages', user)
+  console.log(user)
+  store.dispatch('watchMessages', user)
   router.push(`/chats/${user}`)
 }
 
@@ -47,8 +50,8 @@ function onNewChat(always: boolean) {
 
 const chats = computed(() => {
   if (searchQuery.value === '') return store.getters.chats.chats
-  return store.getters.chats.chats.filter((user: string) =>
-    user.toLowerCase().startsWith(searchQuery.value.toLowerCase())
+  return store.getters.chats.chats.filter((chat: Chat) =>
+    chat.user.toLowerCase().startsWith(searchQuery.value.toLowerCase())
   )
 })
 </script>

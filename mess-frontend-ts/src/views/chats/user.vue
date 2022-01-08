@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col p-3 pt-12 text-[16px] sm:pt-3 size">
     <div class="">
-      <base-button @click="$router.push('/chats')" class="w-[70px]">
+      <base-button @press="$router.push('/chats')" class="w-[70px]">
         &lt; Back
       </base-button>
       <div class="flex justify-center w-full mb-2">
@@ -16,16 +16,16 @@
     >
       <the-message v-for="message of messages" :key="message.id" :message="message" />
     </div>
-    <div
+    <!-- <div
       class="flex-grow order-last block px-2 space-y-2 overflow-y-scroll sm:hidden"
       ref="messagesElementReverse"
     >
       <the-message
         v-for="message of [...messages].reverse()"
-        :key="message.timestamp"
+        :key="message.id"
         :message="message"
       />
-    </div>
+    </div> -->
     <div
       class="sm:absolute sm:bottom-1 sm:px-3 my-3 left-0 flex space-x-0.5 justify-center w-full"
     >
@@ -35,7 +35,8 @@
         placeholder="message..."
         @keyup.enter="onSend"
       />
-      <base-button @click="onSend"> Send </base-button>
+      <base-button @press="onRead" :disable="inbox === 0"> Load new </base-button>
+      <base-button @press="onSend"> Send </base-button>
     </div>
   </div>
 </template>
@@ -50,16 +51,17 @@ import TheMessage from '/src/components/TheMessage.vue'
 import BaseButton from '/src/components/base/BaseButton.vue'
 import BaseInput from '/src/components/base/BaseInput.vue'
 import BaseTextarea from '/src/components/base/BaseTextarea.vue'
+import { Chat } from '../../mess-api'
 
 const store = useStore()
 const router = useRouter()
 
 const messagesElement = ref()
-const messagesElementReverse = ref()
+// const messagesElementReverse = ref()
 
 function scroolMessagesBottom() {
   messagesElement.value.scrollTop = messagesElement.value.scrollHeight
-  messagesElementReverse.value.scrollTop = 0
+  // messagesElementReverse.value.scrollTop = 0
 }
 
 function scroolMessagesBottomSlow() {
@@ -67,29 +69,33 @@ function scroolMessagesBottomSlow() {
     top: messagesElement.value.scrollHeight,
     behavior: 'smooth',
   })
-  messagesElementReverse.value.scroll({
-    top: 0,
-    behavior: 'smooth',
-  })
+  // messagesElementReverse.value.scroll({
+  //   top: 0,
+  //   behavior: 'smooth',
+  // })
 }
 
 onMounted(() => {
-  updateTimeout()
-  scroolMessagesBottom()
-  // read messages
-  // store.dispatch('readMessagesFrom', props.user)
+  setTimeout(scroolMessagesBottom, 0)
+  setTimeout(scroolMessagesBottom, 100)
+  setTimeout(scroolMessagesBottom, 200)
+  setTimeout(scroolMessagesBottom, 300)
+  setTimeout(scroolMessagesBottom, 400)
 })
-
-function updateTimeout() {
-  store.dispatch('readMessages', props.user)
-  setTimeout(updateTimeout, 5000)
-}
 
 const props = defineProps({ user: String })
 
 const message = ref('')
-// element.scrollTop = element.scrollHeight
 const messages = computed(() => store.getters.messages.messagesWith(props.user))
+const inbox = computed(() => {
+  const chats: Array<Chat> = store.getters.chats.chats
+  console.log({ chats })
+  for (const chat of chats) {
+    if (chat.user === props.user) return chat.inbox
+  }
+  return 0
+})
+// const inbox = computed(() => store.getters.messages.inbox(props.user))
 
 function onSend(event: any) {
   if (event?.ctrlKey) {
@@ -103,6 +109,13 @@ function onSend(event: any) {
     to: props.user,
   })
   message.value = ''
+  setTimeout(scroolMessagesBottomSlow, 0)
+  setTimeout(scroolMessagesBottomSlow, 1000)
+}
+
+function onRead() {
+  console.log('read')
+  store.dispatch('readMessages', props.user)
   setTimeout(scroolMessagesBottomSlow, 0)
   setTimeout(scroolMessagesBottomSlow, 1000)
 }

@@ -1,19 +1,12 @@
 // store.ts
 import { createStore } from 'vuex'
 
-import mess, {
-  Message,
-  messages,
-  utils,
-  auth,
-  RawMessage,
-  MessageStatus,
-} from '../mess-api'
+import mess, { Message, RawMessage, MessageStatus, Chat } from '../mess-api'
 
 export interface State {
   login: string
   messages: Array<Message>
-  chats: Array<string>
+  chats: Array<Chat>
 }
 
 const timestampSort = (a: Message, b: Message) => a.timestamp - b.timestamp
@@ -48,7 +41,7 @@ export const store = createStore<State>({
               )
           )
         ),
-
+        inbox: (from: string): number => 1,
         messagesFrom: (from: string): Array<Message> =>
           state.messages
             .filter((message: Message) => message.from === from)
@@ -65,7 +58,7 @@ export const store = createStore<State>({
     },
     chats: (state: State) => {
       return {
-        chats: state.chats,
+        chats: state.chats as Array<Chat>,
       }
     },
   },
@@ -74,22 +67,27 @@ export const store = createStore<State>({
     setLogin(state: State, login: string) {
       state.login = login
     },
-    addMessage(state: State, message: Message) {
-      if (!mess.messages.isInside(message, state.messages)) state.messages.push(message)
-    },
-    // TODO: update status and unread fields
-    addMessages(state: State, messages: Array<Message>) {
-      const ids = new Set(state.messages.map((message: Message) => message.id))
-      const filteredMessages = messages.filter((message: Message) => !ids.has(message.id))
-      state.messages = state.messages.concat(filteredMessages)
-    },
     setMessages(state: State, messages: Array<Message>) {
       state.messages = messages
     },
-    setChats(state: State, chats: Array<string>) {
+    addMessage(state: State, message: Message) {
+      if (!mess.messages.isInside(message, state.messages)) state.messages.push(message)
+    },
+    addMessages(state: State, messages: Array<Message>) {
+      const newIds = new Set(messages.map((message: Message) => message.id))
+      const filteredStateMessages = state.messages.filter(
+        (message: Message) => !newIds.has(message.id)
+      )
+      state.messages = filteredStateMessages.concat(messages)
+    },
+    setChats(state: State, chats: Array<Chat>) {
       state.chats = chats
     },
-
+    addChats(state: State, chats: Array<Chat>) {
+      const newChats = new Set(chats.map(({ user }) => user))
+      const filteredChats = state.chats.filter(({ user }) => !newChats.has(user))
+      state.chats = filteredChats.concat(chats)
+    },
     setMessageStatus(state: State, payload: { id: string; status: MessageStatus }) {
       state.messages = state.messages.map((message: Message) => {
         return {
@@ -131,19 +129,34 @@ export const store = createStore<State>({
   },
 
   actions: {
-    async userLogin({ commit }, login: string) {
+    async userLogin({ commit, dispatch }, login: string) {
       const response = await mess.auth.validateLogin(login)
       if (response) {
         commit('setLogin', login)
-        // const messages = await mess.messages.getMessages(login)
-        // commit('setMessages', messages)
-        const chats = await mess.chats.getChats(login)
-        commit('setChats', chats)
+        dispatch('getChats')
       } else throw new Error('Invalid login')
     },
+
     async userLogout({ commit }) {
       commit('setLogin', '')
       commit('setMessages', [])
+      commit('setChats', [])
+    },
+
+    async getChats({ commit, state }) {
+      const chats = await mess.chats.getChats(state.login)
+      commit('setChats', chats)
+    },
+
+    async watchMessages({ commit, state }, user) {
+      const messages = await mess.messages.watchMessages(state.login, user)
+      commit('addMessages', messages)
+    },
+
+    async readMessages({ commit, state, dispatch }, user) {
+      const messages = await mess.messages.readMessages(state.login, user)
+      commit('addMessages', messages)
+      dispatch('getChats')
     },
 
     async sendMessage({ commit, state }, payload: { message: string; to: string }) {
@@ -153,20 +166,13 @@ export const store = createStore<State>({
         body: payload.message,
       }
 
-      const [message, promise] = mess.messages.sendMessage(rawMessage)
-      // messages.sendMessage(message).then((response: boolean) => {
-      //   commit('setMessageStatus', { id: message.id, status: response ? 'OK' : 'FAILED' })
-      // })
-      commit('addMessage', message)
-      console.log('new message', message)
-      promise.then((val) =>
-        commit('setMessageStatus', { id: message.id, status: val.data })
-      )
-    },
+      const response = mess.messages.sendMessage(rawMessage)
 
-    async readMessages({ commit, state }, user) {
-      const messages = await mess.messages.readMessages(state.login, user)
-      commit('addMessages', messages)
+      commit('addMessage', response.message)
+      // console.log('new message', response.message)
+      response.wait.then((status) =>
+        commit('setMessageStatus', { id: response.message.id, status: status.data })
+      )
     },
   },
 })
