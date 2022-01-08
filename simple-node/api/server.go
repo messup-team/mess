@@ -35,59 +35,106 @@ func (s *Server) GetDB() (*db.Queries, error) {
 	return db.New(conn), nil
 }
 
-// func (s *Server) ReadMessages() http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		w.Header().Set("Content-Type", "application/json")
-// 		w.Header().Set("Access-Control-Allow-Origin", "*")
+func (s *Server) WatchMessges() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-// 		dbAcces, err := s.GetDB()
-// 		if err != nil {
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
+		dbAcces, err := s.GetDB()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-// 		user := r.URL.Query().Get("user")
-// 		if user == "" {
-// 			http.Error(w, err.Error(), http.StatusBadRequest)
-// 			return
-// 		}
+		user := r.URL.Query().Get("user")
+		if user == "" {
+			http.Error(w, "user is empty", http.StatusBadRequest)
+			return
+		}
 
-// 		offsetString := r.URL.Query().Get("offset")
+		with := r.URL.Query().Get("with")
+		if with == "" {
+			http.Error(w, "with is empty", http.StatusBadRequest)
+			return
+		}
 
-// 		if offsetString == "" {
-// 			offsetString = "0"
-// 		}
+		offsetString := r.URL.Query().Get("offset")
 
-// 		offset, err := strconv.Atoi(offsetString)
+		if offsetString == "" {
+			offsetString = "0"
+		}
 
-// 		if err != nil {
-// 			http.Error(w, err.Error(), http.StatusBadRequest)
-// 			return
-// 		}
+		offset, err := strconv.Atoi(offsetString)
 
-// 		messages, err := dbAcces.GetMessages(context.Background(), db.GetMessagesParams{
-// 			From:   user,
-// 			Offset: int32(offset),
-// 		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-// 		if err != nil {
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
+		messages, err := dbAcces.WatchMessages(context.Background(), db.WatchMessagesParams{
+			From:   user,
+			To:     with,
+			Offset: int32(offset),
+		})
 
-// 		for _, message := range messages {
-// 			err = dbAcces.ReadMessageById(context.Background(), message.ID)
-// 			if err != nil {
-// 				return
-// 			}
-// 		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
-// 		if err := json.NewEncoder(w).Encode(messages); err != nil {
-// 			http.Error(w, err.Error(), http.StatusInternalServerError)
-// 			return
-// 		}
-// 	}
-// }
+		if err := json.NewEncoder(w).Encode(messages); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (s *Server) AmountNewMessages() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		dbAcces, err := s.GetDB()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		user := r.URL.Query().Get("user")
+		if user == "" {
+			http.Error(w, "user is empty", http.StatusBadRequest)
+			return
+		}
+
+		offsetString := r.URL.Query().Get("offset")
+
+		if offsetString == "" {
+			offsetString = "0"
+		}
+
+		offset, err := strconv.Atoi(offsetString)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		chats, err := dbAcces.AmountNewMessages(context.Background(), db.AmountNewMessagesParams{
+			To:     user,
+			Offset: int32(offset),
+		})
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(chats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
 
 func (s *Server) ReadMessages() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -125,62 +172,9 @@ func (s *Server) ReadMessages() http.HandlerFunc {
 			return
 		}
 
-		messages, err := dbAcces.GetMessagesWith(context.Background(), db.GetMessagesWithParams{
-			From:   user,
-			To:     with,
-			Offset: int32(offset),
-		})
-
-		for _, message := range messages {
-			err = dbAcces.ReadMessageById(context.Background(), message.ID)
-			if err != nil {
-				return
-			}
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if err := json.NewEncoder(w).Encode(messages); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-}
-
-func (s *Server) GetChats() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-
-		dbAcces, err := s.GetDB()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		user := r.URL.Query().Get("user")
-		if user == "" {
-			http.Error(w, "user is empty", http.StatusBadRequest)
-			return
-		}
-
-		offsetString := r.URL.Query().Get("offset")
-		if offsetString == "" {
-			offsetString = "0"
-		}
-
-		offset, err := strconv.Atoi(offsetString)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		messages, err := dbAcces.GetChats(context.Background(), db.GetChatsParams{
-			From:   user,
+		messages, err := dbAcces.ReadMessages(context.Background(), db.ReadMessagesParams{
+			To:     user,
+			From:   with,
 			Offset: int32(offset),
 		})
 
@@ -219,7 +213,7 @@ func (s *Server) SendMessage() http.HandlerFunc {
 			return
 		}
 
-		err = dbAcces.ProceedMessage(context.Background(), message.ID)
+		err = dbAcces.MovePendingMessages(context.Background(), message.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -239,7 +233,54 @@ func (s *Server) SendMessage() http.HandlerFunc {
 	}
 }
 
-func (s *Server) Default() http.HandlerFunc {
+func (s *Server) GetChats() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		dbAcces, err := s.GetDB()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		user := r.URL.Query().Get("user")
+		if user == "" {
+			http.Error(w, "user is empty", http.StatusBadRequest)
+			return
+		}
+
+		offsetString := r.URL.Query().Get("offset")
+
+		if offsetString == "" {
+			offsetString = "0"
+		}
+
+		offset, err := strconv.Atoi(offsetString)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		chats, err := dbAcces.GetChats(context.Background(), db.GetChatsParams{
+			From:   user,
+			Offset: int32(offset),
+		})
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.NewEncoder(w).Encode(chats); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (s *Server) DefaultOptions() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -248,10 +289,15 @@ func (s *Server) Default() http.HandlerFunc {
 
 func (s *Server) routes() {
 	// GET
-	s.HandleFunc("/messages/read", s.ReadMessages()).Methods("GET")
+	// doesnot change the state of base
+	s.HandleFunc("/messages/watch", s.WatchMessges()).Methods("GET")
+	s.HandleFunc("/messages/amount", s.AmountNewMessages())
 	s.HandleFunc("/chats/get", s.GetChats()).Methods("GET")
+
+	// change the state of base
+	s.HandleFunc("/messages/read", s.ReadMessages()).Methods("GET")
 
 	// POST
 	s.HandleFunc("/messages/send", s.SendMessage()).Methods("POST")
-	s.HandleFunc("/messages/send", s.Default()).Methods("OPTIONS")
+	s.HandleFunc("/messages/send", s.DefaultOptions()).Methods("OPTIONS")
 }

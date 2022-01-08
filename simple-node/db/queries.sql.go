@@ -9,39 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const addMessage = `-- name: AddMessage :exec
-insert into messages (id, "from", "to", body, status, "timestamp")
-values (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6
-)
-`
-
-type AddMessageParams struct {
-	ID        uuid.UUID
-	From      string
-	To        string
-	Body      string
-	Status    string
-	Timestamp int64
-}
-
-func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) error {
-	_, err := q.db.ExecContext(ctx, addMessage,
-		arg.ID,
-		arg.From,
-		arg.To,
-		arg.Body,
-		arg.Status,
-		arg.Timestamp,
-	)
-	return err
-}
-
 const addPendingMessage = `-- name: AddPendingMessage :exec
 insert into pending_messages (id, "from", "to", body, "timestamp")
 values (
@@ -70,6 +37,46 @@ func (q *Queries) AddPendingMessage(ctx context.Context, arg AddPendingMessagePa
 		arg.Timestamp,
 	)
 	return err
+}
+
+const amountNewMessages = `-- name: AmountNewMessages :many
+select "from", count(id) from messages
+where "to" = $1 and unread
+group by "from"
+limit 100 offset $2
+`
+
+type AmountNewMessagesParams struct {
+	To     string
+	Offset int32
+}
+
+type AmountNewMessagesRow struct {
+	From  string
+	Count int64
+}
+
+func (q *Queries) AmountNewMessages(ctx context.Context, arg AmountNewMessagesParams) ([]AmountNewMessagesRow, error) {
+	rows, err := q.db.QueryContext(ctx, amountNewMessages, arg.To, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AmountNewMessagesRow
+	for rows.Next() {
+		var i AmountNewMessagesRow
+		if err := rows.Scan(&i.From, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const changeStatus = `-- name: ChangeStatus :exec
@@ -133,262 +140,7 @@ func (q *Queries) GetChats(ctx context.Context, arg GetChatsParams) ([]interface
 	return items, nil
 }
 
-const getChatsFrom = `-- name: GetChatsFrom :many
-select "to" as "user"
-from messages
-where "from" = $1
-group by "to"
-order by max("timestamp") desc
-limit 100 offset $2
-`
-
-type GetChatsFromParams struct {
-	From   string
-	Offset int32
-}
-
-func (q *Queries) GetChatsFrom(ctx context.Context, arg GetChatsFromParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getChatsFrom, arg.From, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var user string
-		if err := rows.Scan(&user); err != nil {
-			return nil, err
-		}
-		items = append(items, user)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getChatsTo = `-- name: GetChatsTo :many
-select "from" as "user"
-from messages
-where "to" = $1
-group by "from"
-order by max("timestamp") desc
-limit 100 offset $2
-`
-
-type GetChatsToParams struct {
-	To     string
-	Offset int32
-}
-
-func (q *Queries) GetChatsTo(ctx context.Context, arg GetChatsToParams) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getChatsTo, arg.To, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var user string
-		if err := rows.Scan(&user); err != nil {
-			return nil, err
-		}
-		items = append(items, user)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getMessage = `-- name: GetMessage :one
-select id, "from", "to", body, unread, status, timestamp
-from messages
-where id = $1
-limit 1
-`
-
-func (q *Queries) GetMessage(ctx context.Context, id uuid.UUID) (Message, error) {
-	row := q.db.QueryRowContext(ctx, getMessage, id)
-	var i Message
-	err := row.Scan(
-		&i.ID,
-		&i.From,
-		&i.To,
-		&i.Body,
-		&i.Unread,
-		&i.Status,
-		&i.Timestamp,
-	)
-	return i, err
-}
-
-const getMessages = `-- name: GetMessages :many
-select messages.id, messages."from", messages."to", messages.body, messages.unread, messages.status, messages.timestamp
-from messages
-         left join statuses on messages.status = statuses.name
-where ("from" = $1 or "to" = $1)
-  and code = 1
-limit 1000 offset $2
-`
-
-type GetMessagesParams struct {
-	From   string
-	Offset int32
-}
-
-func (q *Queries) GetMessages(ctx context.Context, arg GetMessagesParams) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, getMessages, arg.From, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Message
-	for rows.Next() {
-		var i Message
-		if err := rows.Scan(
-			&i.ID,
-			&i.From,
-			&i.To,
-			&i.Body,
-			&i.Unread,
-			&i.Status,
-			&i.Timestamp,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getMessagesWith = `-- name: GetMessagesWith :many
-select messages.id, messages."from", messages."to", messages.body, messages.unread, messages.status, messages.timestamp
-from messages
-         left join statuses on messages.status = statuses.name
-where ("from" = $1 and "to" = $2)
-   or ("from" = $2 and "to" = $1)
-    and code = 1
-limit 1000 offset $3
-`
-
-type GetMessagesWithParams struct {
-	From   string
-	To     string
-	Offset int32
-}
-
-func (q *Queries) GetMessagesWith(ctx context.Context, arg GetMessagesWithParams) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, getMessagesWith, arg.From, arg.To, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Message
-	for rows.Next() {
-		var i Message
-		if err := rows.Scan(
-			&i.ID,
-			&i.From,
-			&i.To,
-			&i.Body,
-			&i.Unread,
-			&i.Status,
-			&i.Timestamp,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getPendingMessages = `-- name: GetPendingMessages :many
-select id, "from", "to", body, timestamp, proceed from pending_messages where proceed = false
-limit 1000 offset $1
-`
-
-func (q *Queries) GetPendingMessages(ctx context.Context, offset int32) ([]PendingMessage, error) {
-	rows, err := q.db.QueryContext(ctx, getPendingMessages, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []PendingMessage
-	for rows.Next() {
-		var i PendingMessage
-		if err := rows.Scan(
-			&i.ID,
-			&i.From,
-			&i.To,
-			&i.Body,
-			&i.Timestamp,
-			&i.Proceed,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getStatuses = `-- name: GetStatuses :many
-select id, name, code, description from statuses
-`
-
-func (q *Queries) GetStatuses(ctx context.Context) ([]Status, error) {
-	rows, err := q.db.QueryContext(ctx, getStatuses)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Status
-	for rows.Next() {
-		var i Status
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Code,
-			&i.Description,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const proceedMessage = `-- name: ProceedMessage :exec
+const movePendingMessages = `-- name: MovePendingMessages :exec
 insert into messages (id, "from", "to", body, unread, status, timestamp)
 select id, "from", "to", body, true, 'PROCESS', timestamp
 from pending_messages
@@ -396,35 +148,115 @@ where pending_messages.id = $1
   and not proceed
 `
 
-func (q *Queries) ProceedMessage(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, proceedMessage, id)
+//---- name: GetPendingMessages :many
+// DEV
+func (q *Queries) MovePendingMessages(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, movePendingMessages, id)
 	return err
 }
 
-const readMessageById = `-- name: ReadMessageById :exec
-update messages
-set unread = false
+const poceedPendingMessages = `-- name: PoceedPendingMessages :exec
+update pending_messages
+set proceed = true
 where id = $1
 `
 
-func (q *Queries) ReadMessageById(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, readMessageById, id)
+func (q *Queries) PoceedPendingMessages(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, poceedPendingMessages, id)
 	return err
 }
 
-const readMessagesFromTo = `-- name: ReadMessagesFromTo :exec
+const readMessages = `-- name: ReadMessages :many
 update messages
 set unread = false
-where "from" = $1
-  and "to" = $2
+where id in (
+    select id 
+    from messages
+    where (messages."from" = $2 and messages."to" = $1 and unread)
+    order by "timestamp" desc
+    limit 1000 offset $3
+) returning id, "from", "to", body, unread, status, timestamp
 `
 
-type ReadMessagesFromToParams struct {
-	From string
-	To   string
+type ReadMessagesParams struct {
+	To     string
+	From   string
+	Offset int32
 }
 
-func (q *Queries) ReadMessagesFromTo(ctx context.Context, arg ReadMessagesFromToParams) error {
-	_, err := q.db.ExecContext(ctx, readMessagesFromTo, arg.From, arg.To)
-	return err
+func (q *Queries) ReadMessages(ctx context.Context, arg ReadMessagesParams) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, readMessages, arg.To, arg.From, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.From,
+			&i.To,
+			&i.Body,
+			&i.Unread,
+			&i.Status,
+			&i.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const watchMessages = `-- name: WatchMessages :many
+select id, "from", "to", body, unread, status, timestamp
+from messages
+where ("from" = $1 and "to" = $2)
+   or ("from" = $2 and "to" = $1 and not unread)
+order by "timestamp" desc
+limit 1000 offset $3
+`
+
+type WatchMessagesParams struct {
+	From   string
+	To     string
+	Offset int32
+}
+
+func (q *Queries) WatchMessages(ctx context.Context, arg WatchMessagesParams) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, watchMessages, arg.From, arg.To, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.From,
+			&i.To,
+			&i.Body,
+			&i.Unread,
+			&i.Status,
+			&i.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

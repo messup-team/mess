@@ -1,9 +1,13 @@
 # HTTP
 
+### WatchMessages
+GET http://localhost:8080/messages/watch?user=kotsmile&with=roma&offset=0
 
-### ReadMessages 
-GET http://localhost:8080/messages/read?user=kotsmile&with=man&offset=0
+### AmountNewMessages
+GET http://localhost:8080/messages/amount?user=kotsmile
 
+### ReadMessages
+GET http://localhost:8080/messages/read?user=kotsmile&with=roma
 
 ### GetChats 
 GET http://localhost:8080/chats/get?user=kotsmile&offset=0
