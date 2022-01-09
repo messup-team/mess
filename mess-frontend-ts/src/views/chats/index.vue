@@ -40,7 +40,7 @@ function onSelect(user: string) {
 
 function onNewChat(always: boolean) {
   if (chats.value.length === 0 || always) {
-    router.push(`/chats/${searchQuery.value}`)
+    router.push(`/chats/${searchQuery.value.toLowerCase()}`)
     return
   } else {
     router.push(`/chats/${chats.value[0]}`)
