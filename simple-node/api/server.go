@@ -243,6 +243,9 @@ func (s *Server) DefaultOptions() http.HandlerFunc {
 func (s *Server) routes() {
 	// GET
 	// doesnot change the state of base
+	s.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "online")
+	})
 	s.HandleFunc("/messages/watch", s.WatchMessges()).Methods("GET")
 	s.HandleFunc("/chats/get", s.GetChats()).Methods("GET")
 
