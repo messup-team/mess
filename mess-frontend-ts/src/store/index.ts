@@ -83,9 +83,9 @@ export const store = createStore<State>({
       if (!mess.messages.isInside(message, state.messages)) state.messages.push(message)
     },
     addMessages(state: State, messages: Array<Message>) {
-      const newIds = new Set(messages.map((message: Message) => message.id))
+      const newIds = messages.map((message: Message) => message.id)
       const filteredStateMessages = state.messages.filter(
-        (message: Message) => !newIds.has(message.id)
+        (message: Message) => !newIds.includes(message.id)
       )
       state.messages = filteredStateMessages.concat(messages)
     },

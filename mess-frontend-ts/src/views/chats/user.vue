@@ -44,7 +44,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
@@ -83,6 +83,7 @@ onMounted(() => {
   setTimeout(scroolMessagesBottom, 200)
   setTimeout(scroolMessagesBottom, 300)
   setTimeout(scroolMessagesBottom, 400)
+  update()
 })
 
 const props = defineProps({ user: String })
@@ -110,6 +111,7 @@ function onSend(event: any) {
     message: message.value,
     to: props.user,
   })
+  store.dispatch('watchMessages', props.user)
   message.value = ''
   setTimeout(scroolMessagesBottomSlow, 0)
   setTimeout(scroolMessagesBottomSlow, 1000)
@@ -120,6 +122,15 @@ function onRead() {
   setTimeout(scroolMessagesBottomSlow, 0)
   setTimeout(scroolMessagesBottomSlow, 1000)
 }
+var flag = true
+function update() {
+  if (!flag) return
+  store.dispatch('watchMessages', props.user)
+  setTimeout(update, 1000)
+}
+onUnmounted(() => {
+  flag = false
+})
 </script>
 
 <style>
