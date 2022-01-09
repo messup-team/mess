@@ -1,7 +1,12 @@
 // store.ts
-import { createStore } from 'vuex'
+import { createStore, Dispatch } from 'vuex'
 
 import mess, { Message, RawMessage, MessageStatus, Chat } from '../mess-api'
+
+async function update(dispatch: Dispatch) {
+  dispatch('getChats')
+  setTimeout(async () => await update(dispatch), 1000)
+}
 
 export interface State {
   login: string
@@ -130,11 +135,12 @@ export const store = createStore<State>({
 
   actions: {
     async userLogin({ commit, dispatch }, login: string) {
-      const response = await mess.auth.validateLogin(login)
+      const response = await mess.auth.validateLogin(login.toLowerCase())
       if (response) {
-        commit('setLogin', login)
+        commit('setLogin', login.toLowerCase())
         dispatch('getChats')
       } else throw new Error('Invalid login')
+      setTimeout(async () => await update(dispatch), 1000)
     },
 
     async userLogout({ commit }) {
@@ -144,22 +150,26 @@ export const store = createStore<State>({
     },
 
     async getChats({ commit, state }) {
+      if (state.login === '') return
       const chats = await mess.chats.getChats(state.login)
       commit('setChats', chats)
     },
 
     async watchMessages({ commit, state }, user) {
+      if (state.login === '') return
       const messages = await mess.messages.watchMessages(state.login, user)
       commit('addMessages', messages)
     },
 
     async readMessages({ commit, state, dispatch }, user) {
+      if (state.login === '') return
       const messages = await mess.messages.readMessages(state.login, user)
       commit('addMessages', messages)
       dispatch('getChats')
     },
 
     async sendMessage({ commit, state }, payload: { message: string; to: string }) {
+      if (state.login === '') return
       const rawMessage: RawMessage = {
         from: state.login,
         to: payload.to,
@@ -169,7 +179,6 @@ export const store = createStore<State>({
       const response = mess.messages.sendMessage(rawMessage)
 
       commit('addMessage', response.message)
-      // console.log('new message', response.message)
       response.wait.then((status) =>
         commit('setMessageStatus', { id: response.message.id, status: status.data })
       )

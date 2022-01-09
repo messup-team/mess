@@ -34,7 +34,6 @@ const router = useRouter()
 const searchQuery = ref('')
 
 function onSelect(user: string) {
-  console.log(user)
   store.dispatch('watchMessages', user)
   router.push(`/chats/${user}`)
 }

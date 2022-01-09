@@ -16,7 +16,7 @@
     >
       <the-message v-for="message of messages" :key="message.id" :message="message" />
     </div>
-    <!-- <div
+    <div
       class="flex-grow order-last block px-2 space-y-2 overflow-y-scroll sm:hidden"
       ref="messagesElementReverse"
     >
@@ -25,7 +25,7 @@
         :key="message.id"
         :message="message"
       />
-    </div> -->
+    </div>
     <div
       class="sm:absolute sm:bottom-1 sm:px-3 my-3 left-0 flex space-x-0.5 justify-center w-full"
     >
@@ -35,7 +35,9 @@
         placeholder="message..."
         @keyup.enter="onSend"
       />
-      <base-button @press="onRead" :disable="inbox === 0"> Load new </base-button>
+      <base-button @press="onRead" :disable="inbox === 0" :highlight="inbox !== 0">
+        Load new
+      </base-button>
       <base-button @press="onSend"> Send </base-button>
     </div>
   </div>
@@ -57,11 +59,11 @@ const store = useStore()
 const router = useRouter()
 
 const messagesElement = ref()
-// const messagesElementReverse = ref()
+const messagesElementReverse = ref()
 
 function scroolMessagesBottom() {
   messagesElement.value.scrollTop = messagesElement.value.scrollHeight
-  // messagesElementReverse.value.scrollTop = 0
+  messagesElementReverse.value.scrollTop = 0
 }
 
 function scroolMessagesBottomSlow() {
@@ -69,10 +71,10 @@ function scroolMessagesBottomSlow() {
     top: messagesElement.value.scrollHeight,
     behavior: 'smooth',
   })
-  // messagesElementReverse.value.scroll({
-  //   top: 0,
-  //   behavior: 'smooth',
-  // })
+  messagesElementReverse.value.scroll({
+    top: 0,
+    behavior: 'smooth',
+  })
 }
 
 onMounted(() => {
@@ -89,7 +91,6 @@ const message = ref('')
 const messages = computed(() => store.getters.messages.messagesWith(props.user))
 const inbox = computed(() => {
   const chats: Array<Chat> = store.getters.chats.chats
-  console.log({ chats })
   for (const chat of chats) {
     if (chat.user === props.user) return chat.inbox
   }
@@ -102,7 +103,8 @@ function onSend(event: any) {
     message.value += '\n'
     return
   }
-  message.value = message.value.slice(0, message.value.length - 1)
+  if (message.value.endsWith('\n'))
+    message.value = message.value.slice(0, message.value.length - 1)
   if (message.value === '') return
   store.dispatch('sendMessage', {
     message: message.value,
@@ -114,7 +116,6 @@ function onSend(event: any) {
 }
 
 function onRead() {
-  console.log('read')
   store.dispatch('readMessages', props.user)
   setTimeout(scroolMessagesBottomSlow, 0)
   setTimeout(scroolMessagesBottomSlow, 1000)

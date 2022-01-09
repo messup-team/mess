@@ -13,7 +13,7 @@ import { mockMessages } from './mock'
 
 export type MessageStatus = 'OK' | 'FAILED' | 'PROCESS'
 
-const host = 'http://localhost:8080'
+const host = 'https://data.messup.ru'
 
 export interface RawMessage {
   from: string
@@ -60,7 +60,8 @@ async function getChats(user: string, offset = 0): Promise<Array<Chat>> {
         offset,
       },
     })
-    return response.data as Array<Chat>
+    if (response.data) return response.data as Array<Chat>
+    return []
   } catch (error) {
     console.error(error)
     return new Promise((resolve, reject) => resolve([]))
@@ -115,7 +116,6 @@ function sendMessage(rawMessage: RawMessage): Response {
     id: uuidv4(),
     timestamp: now(),
   }
-  console.log({ message })
 
   let promise
   try {
