@@ -135,7 +135,12 @@ onUnmounted(() => {
 
 <style>
 .size {
-  height: calc(100vh - 140px);
+  height: calc(100vh - 90px);
+}
+@media (min-width: 640px) {
+  .size {
+    height: calc(100vh - 140px);
+  }
 }
 ::-webkit-scrollbar {
   width: 6px;
