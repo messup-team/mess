@@ -100,6 +100,7 @@ const inbox = computed(() => {
 // const inbox = computed(() => store.getters.messages.inbox(props.user))
 
 function onSend(event: any) {
+  store.dispatch('watchMessages', props.user)
   if (event?.ctrlKey) {
     message.value += '\n'
     return
@@ -111,7 +112,6 @@ function onSend(event: any) {
     message: message.value,
     to: props.user,
   })
-  store.dispatch('watchMessages', props.user)
   message.value = ''
   setTimeout(scroolMessagesBottomSlow, 0)
   setTimeout(scroolMessagesBottomSlow, 1000)
