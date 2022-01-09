@@ -25,10 +25,9 @@ const isLogin = computed(() => store.getters.auth.isLogin)
 const loginLabel = computed(() => (isLogin.value ? store.getters.auth.login : 'Log in'))
 
 function onLogin() {
-  if (!isLogin.value) {
-    router.push('/login')
-  } else {
+  if (isLogin.value) {
     store.dispatch('userLogout')
   }
+  router.push('/login')
 }
 </script>
