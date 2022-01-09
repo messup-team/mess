@@ -1,5 +1,7 @@
 # HTTP
 
+GET http://65.108.159.23:8080/status
+
 ### WatchMessages
 GET http://localhost:8080/messages/watch?user=kotsmile&with=roma&offset=0
 

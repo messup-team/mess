@@ -26,13 +26,13 @@ func NewServer() *Server {
 	return s
 }
 
-func (s *Server) GetDB() (*db.Queries, error) {
+func (s *Server) GetDB() (*db.Queries, *sql.DB, error) {
 	configDB := "user=postgres dbname=postgres password=1234 host=localhost port=5432 sslmode=disable"
 	conn, err := sql.Open("postgres", configDB)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return db.New(conn), nil
+	return db.New(conn), conn, nil
 }
 
 func (s *Server) WatchMessges() http.HandlerFunc {
@@ -40,7 +40,9 @@ func (s *Server) WatchMessges() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		dbAcces, err := s.GetDB()
+		dbAcces, conn, err := s.GetDB()
+		defer conn.Close()
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -94,7 +96,8 @@ func (s *Server) ReadMessages() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		dbAcces, err := s.GetDB()
+		dbAcces, conn, err := s.GetDB()
+		defer conn.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -154,7 +157,8 @@ func (s *Server) SendMessage() http.HandlerFunc {
 			return
 		}
 
-		dbAcces, err := s.GetDB()
+		dbAcces, conn, err := s.GetDB()
+		defer conn.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -191,7 +195,8 @@ func (s *Server) GetChats() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		dbAcces, err := s.GetDB()
+		dbAcces, conn, err := s.GetDB()
+		defer conn.Close()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
