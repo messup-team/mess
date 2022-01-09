@@ -5,7 +5,7 @@ import mess, { Message, RawMessage, MessageStatus, Chat } from '../mess-api'
 
 async function update(dispatch: Dispatch) {
   dispatch('getChats')
-  setTimeout(async () => await update(dispatch), 1000)
+  setTimeout(async () => await update(dispatch), 2000)
 }
 
 export interface State {
@@ -69,6 +69,10 @@ export const store = createStore<State>({
   },
 
   mutations: {
+    initLocalstorage(state: State) {
+      const store = localStorage.getItem('mess-store')
+      if (store) this.replaceState(Object.assign(state, JSON.parse(store)) as State)
+    },
     setLogin(state: State, login: string) {
       state.login = login
     },
@@ -134,6 +138,9 @@ export const store = createStore<State>({
   },
 
   actions: {
+    async init({ commit }) {
+      commit('initLocalstorage')
+    },
     async userLogin({ commit, dispatch }, login: string) {
       const response = await mess.auth.validateLogin(login.toLowerCase())
       if (response) {
