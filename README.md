@@ -10,5 +10,5 @@
 - [x] connect frontend with backend
 
 ## API
-- [.] Move api for mess to seperate module on ts
-- [.] create mess protocol for secure messages
+- [ ] Move api for mess to seperate module on ts
+- [ ] create mess protocol for secure messages
