@@ -36,6 +36,20 @@
       ref="messagesElementReverse"
     >
       <the-message
+        class="border-green-400 cursor-pointer hover:opacity-75"
+        v-if="inbox !== 0"
+        @click="onRead"
+        special
+        :message="{
+          status: 'PROCESS',
+          body: 'Read new...',
+          timestamp: -1,
+          from: '',
+          to: 'shit',
+          unread: true,
+        }"
+      />
+      <the-message
         v-for="message of [...messages].reverse()"
         :key="message.id"
         :message="message"
