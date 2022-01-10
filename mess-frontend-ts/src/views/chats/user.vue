@@ -15,6 +15,21 @@
       ref="messagesElement"
     >
       <the-message v-for="message of messages" :key="message.id" :message="message" />
+
+      <the-message
+        class="border-green-400 cursor-pointer hover:opacity-75"
+        v-if="inbox !== 0"
+        @click="onRead"
+        special
+        :message="{
+          status: 'PROCESS',
+          body: 'Read new...',
+          timestamp: -1,
+          from: '',
+          to: 'shit',
+          unread: true,
+        }"
+      />
     </div>
     <div
       class="flex-grow order-last block px-2 space-y-2 overflow-y-scroll sm:hidden"
@@ -35,9 +50,9 @@
         placeholder="message..."
         @keyup.enter="onSend"
       />
-      <base-button @press="onRead" :disable="inbox === 0" :highlight="inbox !== 0">
+      <!-- <base-button @press="onRead" :disable="inbox === 0" :highlight="inbox !== 0">
         Load new
-      </base-button>
+      </base-button> -->
       <base-button @press="onSend"> Send </base-button>
     </div>
   </div>
@@ -60,6 +75,10 @@ const router = useRouter()
 
 const messagesElement = ref()
 const messagesElementReverse = ref()
+
+onMounted(() => {
+  if (!store.getters.auth.isLogin) router.push('/login')
+})
 
 function scroolMessagesBottom() {
   messagesElement.value.scrollTop = messagesElement.value.scrollHeight
@@ -113,8 +132,8 @@ function onSend(event: any) {
     to: props.user,
   })
   message.value = ''
-  setTimeout(scroolMessagesBottomSlow, 0)
-  setTimeout(scroolMessagesBottomSlow, 1000)
+  setTimeout(scroolMessagesBottom, 0)
+  setTimeout(scroolMessagesBottom, 1000)
 }
 
 function onRead() {

@@ -19,7 +19,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import { Chat } from '../../mess-api'
@@ -33,6 +33,10 @@ const router = useRouter()
 
 const searchQuery = ref('')
 
+onMounted(() => {
+  if (!store.getters.auth.isLogin) router.push('/login')
+})
+
 function onSelect(user: string) {
   store.dispatch('watchMessages', user)
   router.push(`/chats/${user}`)
@@ -43,7 +47,7 @@ function onNewChat(always: boolean) {
     router.push(`/chats/${searchQuery.value.toLowerCase()}`)
     return
   } else {
-    router.push(`/chats/${chats.value[0]}`)
+    router.push(`/chats/${chats.value[0].user}`)
   }
 }
 
